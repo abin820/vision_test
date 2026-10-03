@@ -5,28 +5,33 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace {
-
-[[noreturn]] void sp_nav_param_error(const rclcpp::Node & node, const std::string & name)
+namespace
 {
-  std::ostringstream oss;
-  oss << "[参数缺失] 节点 '" << node.get_name() << "' 缺少参数 '" << name
-      << "'，请在对应 yaml 的 ros__parameters 中填写。";
-  throw std::runtime_error(oss.str());
-}
-
-template<typename T>
-T require_param(rclcpp::Node * node, const std::string & name)
-{
-  try {
-    if (node->has_parameter(name)) {
-      return node->get_parameter(name).get_value<T>();
+    // 报错信息打印函数，不用管，每个文件都有
+    [[noreturn]] void sp_nav_param_error(const rclcpp::Node &node, const std::string &name)
+    {
+        std::ostringstream oss;
+        oss << "[参数缺失] 节点 '" << node.get_name() << "' 缺少参数 '" << name
+            << "'，请在对应 yaml 的 ros__parameters 中填写。";
+        throw std::runtime_error(oss.str());
     }
-    return node->declare_parameter<T>(name);
-  } catch (const rclcpp::exceptions::UninitializedStaticallyTypedParameterException &) {
-    sp_nav_param_error(*node, name);
-  }
-}
+
+    template <typename T>
+    T require_param(rclcpp::Node *node, const std::string &name)
+    {
+        try
+        {
+            if (node->has_parameter(name))
+            {
+                return node->get_parameter(name).get_value<T>();
+            }
+            return node->declare_parameter<T>(name);
+        }
+        catch (const rclcpp::exceptions::UninitializedStaticallyTypedParameterException &)
+        {
+            sp_nav_param_error(*node, name);
+        }
+    }
 
 }
 
@@ -37,14 +42,14 @@ namespace sp_global_planner
         : Node("planner_server"),
           loader_("sp_global_planner", "sp_global_planner::GlobalPlannerPlugin")
     {
-    costmap_topic_ = require_param<std::string>(this, "costmap_topic");
-    local_costmap_topic_ = require_param<std::string>(this, "local_costmap_topic");
-    path_topic_ = require_param<std::string>(this, "path_topic");
+        costmap_topic_ = require_param<std::string>(this, "costmap_topic");
+        local_costmap_topic_ = require_param<std::string>(this, "local_costmap_topic");
+        path_topic_ = require_param<std::string>(this, "path_topic");
 
         plugin_name_ = require_param<std::string>(this, "plugin_name");
         plugin_type_ = require_param<std::string>(this, "plugin_type");
 
-        path_pub_ = this->create_publisher<nav_msgs::msg::Path>(path_topic_, 1);
+        path_pub_ = this->create_publisher<nav_msgs::msg::Path>(path_topic_, 1); // 路径话题
 
         map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
             costmap_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).reliable().durability_volatile(),
@@ -67,19 +72,19 @@ namespace sp_global_planner
         goal_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
             "/goal_pose", 10,
             std::bind(&PlannerServer::onGoalPose, this, std::placeholders::_1));
-    RCLCPP_INFO(this->get_logger(),
-            "PlannerServer ready. costmap_topic=%s local_costmap_topic=%s path_topic=%s service=make_plan plugin=%s (%s)",
-            costmap_topic_.c_str(), local_costmap_topic_.c_str(), path_topic_.c_str(),
-            plugin_name_.c_str(), plugin_type_.c_str());
+        RCLCPP_INFO(this->get_logger(),
+                    "PlannerServer ready. costmap_topic=%s local_costmap_topic=%s path_topic=%s service=make_plan plugin=%s (%s)",
+                    costmap_topic_.c_str(), local_costmap_topic_.c_str(), path_topic_.c_str(),
+                    plugin_name_.c_str(), plugin_type_.c_str());
     }
     void PlannerServer::init()
     {
         loadPlugin();
 
-    RCLCPP_INFO(this->get_logger(),
-            "PlannerServer ready. costmap_topic=%s local_costmap_topic=%s path_topic=%s service=make_plan plugin=%s (%s)",
-            costmap_topic_.c_str(), local_costmap_topic_.c_str(), path_topic_.c_str(),
-            plugin_name_.c_str(), plugin_type_.c_str());
+        RCLCPP_INFO(this->get_logger(),
+                    "PlannerServer ready. costmap_topic=%s local_costmap_topic=%s path_topic=%s service=make_plan plugin=%s (%s)",
+                    costmap_topic_.c_str(), local_costmap_topic_.c_str(), path_topic_.c_str(),
+                    plugin_name_.c_str(), plugin_type_.c_str());
     }
     void PlannerServer::loadPlugin()
     {

@@ -1,44 +1,57 @@
 # TODO: 在此补全参数
+
 planner_server:
   ros__parameters:
-    costmap_topic: 
-    local_costmap_topic:
-    path_topic:
-    plugin_name:
-    plugin_type:
-
+    costmap_topic: /global_costmap
+    local_costmap_topic: /local_costmap/costmap         #全局和局部谁描述的更危险使用谁的
+    path_topic: /global_path
+    plugin_name: AStar
+    plugin_type: "sp_global_planner/AStarPlanner"
     AStar:
-      lethal_cost:
-      cost_weight:
+      lethal_cost: 100  #致命代价
+      cost_weight: 3.0 #代价权重
 
 esdf_map_publisher:
   ros__parameters:
-    map_yaml:
+    map_yaml: "sp_nav_bringup/map/maze_map.yaml"          #地图yaml文件路径（rmuc_map.yaml是国赛的代价地图）
     frame_id: "map"
-    publish_rate_hz: 1.0
-    unknown_as_obstacle: false
-    robot_radius: 
-    margin:
-    d_safe:
-    w:
-    unknown_cost:
-    visualize_esdf: false
+    publish_rate_hz: 1.0                                  #发布频率
+    unknown_as_obstacle: false                            #未知区域是否作为障碍物
+    robot_radius: 0.3                                  #机器人半径
+    margin: 0.2                                       #边距
+    d_safe: 0.6                                   #安全距离，当d位于robot_radius+margin和d_safe之间时，会有惩罚机制
+    w: 6.0
+    unknown_cost: 30
+    visualize_esdf: true                                  #export GDK_BACKEND=x11，想要显示代价地图需要设置一下变量
 
 controller_server:
   ros__parameters:
-    local_path_topic:
-    odom_topic:
-    odom_frame_id:
+    local_path_topic: "/global_path"   # 与 planner_server 的 path_topic 保持一致
+    odom_topic: "/Odometry"
+    odom_frame_id: "lidar_odom"
     map_frame_id: "map"
-    cmd_vel_topic:
+    cmd_vel_topic: "/sentry/cmd_vel"
     base_frame_id: "base_link"
     control_frequency: 50.0
 
-    plugin_name:
-    plugin_type:
+    plugin_name: "PidController"
+    plugin_type: "PidController"
 
     PidController:
       base_frame_id: "base_link"
+      # ===== 速度环：目标速度 = kp_linear × 剩余距离，再用 PID 跟踪实际速度 =====
+      kp_linear: 1.2           # 参考速度增益（离终点越远越快）
+      kp_v: 0.0                 # 速度环 P（全向底盘先关，纯前馈最稳）
+      ki_v: 0.0                 # 速度环 I（关：速度反馈有滞后，积分会超调）
+      kd_v: 0.0                 # 速度环 D（关）
+      max_linear_velocity: 0.6  # 速度上限 (m/s)
+      # ===== 方向环：PID 跟踪前瞻点方向 =====
+      kp_theta: 1.0            # 方向环 P（1.0 = 纯追踪，全向底盘最优）
+      ki_theta: 0.0             # 方向环 I（关：会积分振荡/蛇形）
+      kd_theta: 0.0             # 方向环 D（关）
+      # ===== 路径跟踪 =====
+      lookahead_distance: 0.3   # 前瞻距离 (m)
+      goal_tolerance: 0.2       # 到达容差 (m)
 
 sp_decision:
   ros__parameters:

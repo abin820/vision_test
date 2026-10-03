@@ -160,7 +160,7 @@ void ControllerServer::onOdometry(const nav_msgs::msg::Odometry::SharedPtr msg)
   current_velocity_map_ = vel_map;
 }
 
-geometry_msgs::msg::PoseStamped ControllerServer::getCurrentPose(const std::string & frame_id)
+geometry_msgs::msg::PoseStamped ControllerServer::getCurrentPose(const std::string & frame_id)  //获取现在的位置
 {
   if (!tf_buffer_) {
     throw tf2::TransformException("TF buffer is not initialized");

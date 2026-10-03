@@ -4,30 +4,31 @@
 #include <optional>
 #include <vector>
 
-namespace sp_global_planner {
-
-class AStarPlanner : public GlobalPlannerPlugin
+namespace sp_global_planner
 {
-public:
-  AStarPlanner() = default;
-  ~AStarPlanner() override = default;
 
-  void configure(const rclcpp::Node::SharedPtr& node, const std::string& plugin_name) override;
-  void setMap(const nav_msgs::msg::OccupancyGrid& costmap) override;
+  class AStarPlanner : public GlobalPlannerPlugin
+  {
+  public:
+    AStarPlanner() = default;
+    ~AStarPlanner() override = default;
 
-  nav_msgs::msg::Path createPlan(
-    const geometry_msgs::msg::PoseStamped& start,
-    const geometry_msgs::msg::PoseStamped& goal) override;
+    void configure(const rclcpp::Node::SharedPtr &node, const std::string &plugin_name) override;
+    void setMap(const nav_msgs::msg::OccupancyGrid &costmap) override;
 
-private:
-  std::optional<nav_msgs::msg::OccupancyGrid> map_;
-  rclcpp::Logger logger_{rclcpp::get_logger("AStarPlanner")};
+    nav_msgs::msg::Path createPlan(
+        const geometry_msgs::msg::PoseStamped &start,
+        const geometry_msgs::msg::PoseStamped &goal) override;
 
-  int lethal_cost_{100};
-  double cost_weight_{2.0};
+  private:
+    std::optional<nav_msgs::msg::OccupancyGrid> map_;
+    rclcpp::Logger logger_{rclcpp::get_logger("AStarPlanner")};
 
-  bool isBlocked(int8_t c) const;
-  double cellCostFactor(int8_t c) const;
-};
+    int lethal_cost_{100};
+    double cost_weight_{2.0};
+
+    bool isBlocked(int8_t c) const;
+    double cellCostFactor(int8_t c) const;
+  };
 
 }

@@ -6,6 +6,7 @@
 #include <string>
 
 #include "behaviortree_cpp_v3/behavior_tree.h"
+#include "geometry_msgs/msg/point_stamped.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "rclcpp/rclcpp.hpp"
 
@@ -26,6 +27,7 @@ namespace sp_decision
   private:
     void init_all_variables();
     void on_goal_pose(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+    void on_clicked_point(const geometry_msgs::msg::PointStamped::SharedPtr msg);
 
     template <typename T>
     void write(const std::string &key, const T &value)
@@ -41,6 +43,7 @@ namespace sp_decision
     std::mutex bb_mutex_;
 
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub_goal_pose_;
+    rclcpp::Subscription<geometry_msgs::msg::PointStamped>::SharedPtr sub_clicked_point_;
   };
 
 }

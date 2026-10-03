@@ -7,211 +7,243 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace {
-
-[[noreturn]] void sp_nav_param_error(const rclcpp::Node & node, const std::string & name)
+namespace
 {
-  std::ostringstream oss;
-  oss << "[参数缺失] 节点 '" << node.get_name() << "' 缺少参数 '" << name
-      << "'，请在对应 yaml 的 ros__parameters 中填写。";
-  throw std::runtime_error(oss.str());
-}
 
-template<typename T>
-T require_param(const rclcpp::Node::SharedPtr & node, const std::string & name)
-{
-  try {
-    if (node->has_parameter(name)) {
-      return node->get_parameter(name).get_value<T>();
+  [[noreturn]] void sp_nav_param_error(const rclcpp::Node &node, const std::string &name)
+  {
+    std::ostringstream oss;
+    oss << "[参数缺失] 节点 '" << node.get_name() << "' 缺少参数 '" << name
+        << "'，请在对应 yaml 的 ros__parameters 中填写。";
+    throw std::runtime_error(oss.str());
+  }
+
+  template <typename T>
+  T require_param(const rclcpp::Node::SharedPtr &node, const std::string &name)
+  {
+    try
+    {
+      if (node->has_parameter(name))
+      {
+        return node->get_parameter(name).get_value<T>();
+      }
+      return node->declare_parameter<T>(name);
     }
-    return node->declare_parameter<T>(name);
-  } catch (const rclcpp::exceptions::UninitializedStaticallyTypedParameterException &) {
-    sp_nav_param_error(*node, name);
+    catch (const rclcpp::exceptions::UninitializedStaticallyTypedParameterException &)
+    {
+      sp_nav_param_error(*node, name);
+    }
   }
-}
 
 }
 
-namespace sp_global_planner {
-
-void AStarPlanner::configure(const rclcpp::Node::SharedPtr& node, const std::string& plugin_name)
-{
-  logger_ = node->get_logger();
-
-  lethal_cost_  = require_param<int>(node, plugin_name + ".lethal_cost");
-  cost_weight_  = require_param<double>(node, plugin_name + ".cost_weight");
-
-  RCLCPP_INFO(logger_, "AStarPlanner configured: lethal_cost=%d cost_weight=%.3f",
-              lethal_cost_, cost_weight_);
-}
-
-void AStarPlanner::setMap(const nav_msgs::msg::OccupancyGrid& costmap)
-{
-  map_ = costmap;
-}
-
-bool AStarPlanner::isBlocked(int8_t c) const
+namespace sp_global_planner
 {
 
-  if (c < 0) return true;
-  return c >= lethal_cost_;
-}
+  void AStarPlanner::configure(const rclcpp::Node::SharedPtr &node, const std::string &plugin_name)
+  {
+    logger_ = node->get_logger();
 
-double AStarPlanner::cellCostFactor(int8_t c) const
-{
+    lethal_cost_ = require_param<int>(node, plugin_name + ".lethal_cost");
+    cost_weight_ = require_param<double>(node, plugin_name + ".cost_weight");
 
-  double cc = std::max<int>(0, c);
-  return 1.0 + cost_weight_ * (cc / 100.0);
-}
-
-nav_msgs::msg::Path AStarPlanner::createPlan(
-  const geometry_msgs::msg::PoseStamped& start,
-  const geometry_msgs::msg::PoseStamped& goal)
-{
-  nav_msgs::msg::Path path;
-  if (!map_) {
-    RCLCPP_ERROR(logger_, "No map received yet.");
-    return path;
-  }
-  const auto& map = *map_;
-  path.header = map.header;
-
-  if (start.header.frame_id != map.header.frame_id || goal.header.frame_id != map.header.frame_id) {
-    RCLCPP_WARN(logger_, "Frame mismatch: start=%s goal=%s map=%s",
-      start.header.frame_id.c_str(), goal.header.frame_id.c_str(), map.header.frame_id.c_str());
+    RCLCPP_INFO(logger_, "AStarPlanner configured: lethal_cost=%d cost_weight=%.3f",
+                lethal_cost_, cost_weight_);
   }
 
-  GridIndex s, g;
-  if (!worldToGrid(map, start.pose.position.x, start.pose.position.y, s)) {
-    RCLCPP_ERROR(logger_, "Start out of map bounds.");
-    return path;
-  }
-  if (!worldToGrid(map, goal.pose.position.x, goal.pose.position.y, g)) {
-    RCLCPP_ERROR(logger_, "Goal out of map bounds.");
-    return path;
+  void AStarPlanner::setMap(const nav_msgs::msg::OccupancyGrid &costmap)
+  {
+    map_ = costmap;
   }
 
-  const int W = static_cast<int>(map.info.width);
-  const int H = static_cast<int>(map.info.height);
-  const int N = W * H;
+  bool AStarPlanner::isBlocked(int8_t c) const // 判断是否是障碍物
+  {
 
-  auto idx = [&](int x, int y){ return y * W + x; };
-
-  if (isBlocked(map.data[idx(s.x, s.y)])) {
-    RCLCPP_ERROR(logger_, "Start is in blocked cell (cost=%d).", (int)map.data[idx(s.x, s.y)]);
-    return path;
-  }
-  if (isBlocked(map.data[idx(g.x, g.y)])) {
-    RCLCPP_ERROR(logger_, "Goal is in blocked cell (cost=%d).", (int)map.data[idx(g.x, g.y)]);
-    return path;
+    if (c < 0)
+      return true;
+    return c >= lethal_cost_;
   }
 
-  struct Node {
-    int i;
-    double f;
-    double g;
-  };
-  struct Cmp { bool operator()(const Node& a, const Node& b) const { return a.f > b.f; } };
+  double AStarPlanner::cellCostFactor(int8_t c) const // 计算代价因子
+  {
 
-  std::priority_queue<Node, std::vector<Node>, Cmp> open;
-  std::vector<double> gscore(N, std::numeric_limits<double>::infinity());
-  std::vector<int> parent(N, -1);
-  std::vector<uint8_t> closed(N, 0);
+    double cc = std::max<int>(0, c);
+    return 1.0 + cost_weight_ * (cc / 100.0);
+  }
 
-  auto h = [&](int x, int y) {
-    double dx = (x - g.x);
-    double dy = (y - g.y);
-    return std::sqrt(dx*dx + dy*dy);
-  };
+  nav_msgs::msg::Path AStarPlanner::createPlan(
+      const geometry_msgs::msg::PoseStamped &start,
+      const geometry_msgs::msg::PoseStamped &goal)
+  {
+    nav_msgs::msg::Path path;
+    if (!map_)
+    {
+      RCLCPP_ERROR(logger_, "No map received yet.");
+      return path;
+    }
+    const auto &map = *map_;
+    path.header = map.header;
 
-  int s_i = idx(s.x, s.y);
-  int g_i = idx(g.x, g.y);
-
-  gscore[s_i] = 0.0;
-  open.push({s_i, h(s.x, s.y), 0.0});
-
-  const int dxs[8] = {1,-1,0,0, 1,1,-1,-1};
-  const int dys[8] = {0,0,1,-1, 1,-1,1,-1};
-
-  bool found = false;
-
-  while (!open.empty()) {
-    Node cur = open.top();
-    open.pop();
-
-    if (closed[cur.i]) continue;
-    closed[cur.i] = 1;
-
-    if (cur.i == g_i) {
-      found = true;
-      break;
+    if (start.header.frame_id != map.header.frame_id || goal.header.frame_id != map.header.frame_id)
+    {
+      RCLCPP_WARN(logger_, "Frame mismatch: start=%s goal=%s map=%s",
+                  start.header.frame_id.c_str(), goal.header.frame_id.c_str(), map.header.frame_id.c_str());
     }
 
-    int cy = cur.i / W;
-    int cx = cur.i - cy * W;
+    GridIndex s, g;
+    if (!worldToGrid(map, start.pose.position.x, start.pose.position.y, s))
+    {
+      RCLCPP_ERROR(logger_, "Start out of map bounds.");
+      return path;
+    }
+    if (!worldToGrid(map, goal.pose.position.x, goal.pose.position.y, g))
+    {
+      RCLCPP_ERROR(logger_, "Goal out of map bounds.");
+      return path;
+    }
 
-    for (int k = 0; k < 8; ++k) {
-      int nx = cx + dxs[k];
-      int ny = cy + dys[k];
-      if (!inBounds(map, nx, ny)) continue;
+    const int W = static_cast<int>(map.info.width);
+    const int H = static_cast<int>(map.info.height);
+    const int N = W * H;
 
-      int ni = idx(nx, ny);
-      if (closed[ni]) continue;
+    auto idx = [&](int x, int y)
+    { return y * W + x; };
 
-      int8_t c = map.data[ni];
-      if (isBlocked(c)) continue;
+    if (isBlocked(map.data[idx(s.x, s.y)]))
+    {
+      RCLCPP_ERROR(logger_, "Start is in blocked cell (cost=%d).", (int)map.data[idx(s.x, s.y)]);
+      return path;
+    }
+    if (isBlocked(map.data[idx(g.x, g.y)]))
+    {
+      RCLCPP_ERROR(logger_, "Goal is in blocked cell (cost=%d).", (int)map.data[idx(g.x, g.y)]);
+      return path;
+    }
 
-      double step = (k < 4) ? 1.0 : std::sqrt(2.0);
+    struct Node
+    {
+      int i;
+      double f;
+      double g;
+    };
+    struct Cmp
+    {
+      bool operator()(const Node &a, const Node &b) const { return a.f > b.f; }
+    };
 
-      double factor = cellCostFactor(c);
-      double tentative = gscore[cur.i] + step * factor;
+    std::priority_queue<Node, std::vector<Node>, Cmp> open;
+    std::vector<double> gscore(N, std::numeric_limits<double>::infinity());
+    std::vector<int> parent(N, -1);
+    std::vector<uint8_t> closed(N, 0);
 
-      if (tentative < gscore[ni]) {
-        gscore[ni] = tentative;
-        parent[ni] = cur.i;
-        double f = tentative + h(nx, ny);
-        open.push({ni, f, tentative});
+    auto h = [&](int x, int y)
+    {
+      double dx = (x - g.x);
+      double dy = (y - g.y);
+      return std::sqrt(dx * dx + dy * dy);
+    };
+
+    int s_i = idx(s.x, s.y);
+    int g_i = idx(g.x, g.y);
+
+    gscore[s_i] = 0.0;
+    open.push({s_i, h(s.x, s.y), 0.0});
+
+    const int dxs[8] = {1, -1, 0, 0, 1, 1, -1, -1};
+    const int dys[8] = {0, 0, 1, -1, 1, -1, 1, -1};
+
+    bool found = false;
+
+    while (!open.empty())
+    {
+      Node cur = open.top();
+      open.pop();
+
+      if (closed[cur.i])
+        continue;
+      closed[cur.i] = 1;
+
+      if (cur.i == g_i)
+      {
+        found = true;
+        break;
+      }
+
+      int cy = cur.i / W;
+      int cx = cur.i - cy * W;
+
+      for (int k = 0; k < 8; ++k)
+      {
+        int nx = cx + dxs[k];
+        int ny = cy + dys[k];
+        if (!inBounds(map, nx, ny))
+          continue;
+
+        int ni = idx(nx, ny);
+        if (closed[ni])
+          continue;
+
+        int8_t c = map.data[ni];
+        if (isBlocked(c))
+          continue;
+
+        double step = (k < 4) ? 1.0 : std::sqrt(2.0);
+
+        double factor = cellCostFactor(c);
+        double tentative = gscore[cur.i] + step * factor;
+
+        if (tentative < gscore[ni])
+        {
+          gscore[ni] = tentative;
+          parent[ni] = cur.i;
+          double f = tentative + h(nx, ny);
+          open.push({ni, f, tentative});
+        }
       }
     }
+
+    if (!found)
+    {
+      RCLCPP_WARN(logger_, "A* failed to find a path.");
+      return path;
+    }
+
+    std::vector<int> cells;
+    int cur = g_i;
+    while (cur != -1)
+    {
+      cells.push_back(cur);
+      if (cur == s_i)
+        break;
+      cur = parent[cur];
+    }
+    if (cells.back() != s_i)
+    {
+      RCLCPP_WARN(logger_, "Path reconstruction failed.");
+      return path;
+    }
+    std::reverse(cells.begin(), cells.end());
+
+    path.poses.reserve(cells.size());
+    for (int ci : cells)
+    {
+      int y = ci / W;
+      int x = ci - y * W;
+
+      double wx, wy;
+      gridToWorld(map, x, y, wx, wy);
+
+      geometry_msgs::msg::PoseStamped ps;
+      ps.header = path.header;
+      ps.pose.position.x = wx;
+      ps.pose.position.y = wy;
+      ps.pose.position.z = 0.0;
+      ps.pose.orientation.w = 1.0;
+      path.poses.push_back(ps);
+    }
+
+    return path; // A*算法f(n) = g(n) + h(n),后续可以看看h(n)有没有优化的办法
   }
-
-  if (!found) {
-    RCLCPP_WARN(logger_, "A* failed to find a path.");
-    return path;
-  }
-
-  std::vector<int> cells;
-  int cur = g_i;
-  while (cur != -1) {
-    cells.push_back(cur);
-    if (cur == s_i) break;
-    cur = parent[cur];
-  }
-  if (cells.back() != s_i) {
-    RCLCPP_WARN(logger_, "Path reconstruction failed.");
-    return path;
-  }
-  std::reverse(cells.begin(), cells.end());
-
-  path.poses.reserve(cells.size());
-  for (int ci : cells) {
-    int y = ci / W;
-    int x = ci - y * W;
-
-    double wx, wy;
-    gridToWorld(map, x, y, wx, wy);
-
-    geometry_msgs::msg::PoseStamped ps;
-    ps.header = path.header;
-    ps.pose.position.x = wx;
-    ps.pose.position.y = wy;
-    ps.pose.position.z = 0.0;
-    ps.pose.orientation.w = 1.0;
-    path.poses.push_back(ps);
-  }
-
-  return path;
-}
 
 }
 
