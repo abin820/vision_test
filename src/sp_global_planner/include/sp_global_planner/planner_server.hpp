@@ -28,6 +28,7 @@ namespace sp_global_planner
 
         void onMap(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
         void onLocalMap(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
+        void onEsdf(const nav_msgs::msg::OccupancyGrid::SharedPtr msg);
 
         void onPlanRequest(
             const std::shared_ptr<nav_msgs::srv::GetPlan::Request> req,
@@ -60,15 +61,18 @@ namespace sp_global_planner
     std::optional<nav_msgs::msg::OccupancyGrid> map_;
     std::optional<nav_msgs::msg::OccupancyGrid> global_map_raw_;
     std::optional<nav_msgs::msg::OccupancyGrid> local_map_;
+    std::optional<nav_msgs::msg::OccupancyGrid> esdf_map_;
 
         rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
         rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr map_sub_;
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr local_map_sub_;
+    rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr esdf_sub_;
         rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
         rclcpp::Service<nav_msgs::srv::GetPlan>::SharedPtr plan_srv_;
 
         std::string costmap_topic_;
     std::string local_costmap_topic_;
+    std::string esdf_costmap_topic_;
         std::string path_topic_;
 
         std::string plugin_name_;

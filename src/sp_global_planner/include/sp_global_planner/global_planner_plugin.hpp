@@ -19,6 +19,8 @@ namespace sp_global_planner
 
     virtual void setMap(const nav_msgs::msg::OccupancyGrid &costmap) = 0;
 
+    virtual void setEsdf(const nav_msgs::msg::OccupancyGrid & /*esdf*/) {}
+
     virtual nav_msgs::msg::Path createPlan(
         const geometry_msgs::msg::PoseStamped &start,
         const geometry_msgs::msg::PoseStamped &goal) = 0;

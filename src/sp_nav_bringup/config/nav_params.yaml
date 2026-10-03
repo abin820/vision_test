@@ -4,12 +4,21 @@ planner_server:
   ros__parameters:
     costmap_topic: /global_costmap
     local_costmap_topic: /local_costmap/costmap         #全局和局部谁描述的更危险使用谁的
+    esdf_costmap_topic: /esdf_costmap                   #ESDF 距离场（用于路径优化）
     path_topic: /global_path
     plugin_name: AStar
     plugin_type: "sp_global_planner/AStarPlanner"
     AStar:
       lethal_cost: 100  #致命代价
       cost_weight: 3.0 #代价权重
+      # ===== 路径优化（ESDF 梯度下降：拉向走廊中心 + 平滑 + 保持参考路径）=====
+      optimize_path: true          # 是否启用路径优化
+      opt_alpha: 0.2               # 平滑项权重
+      opt_beta: 0.4                # 障碍物排斥项权重（离墙越近越大）
+      opt_gamma: 0.5               # 参考路径吸引权重（防止切角/漂移）
+      opt_safe_distance: 0.6       # 安全距离：距墙小于此值时排斥生效 (m)
+      opt_min_clearance: 0.3       # 安全约束：优化时点离墙的最小距离 (m)
+      opt_iterations: 50           # 迭代次数
 
 esdf_map_publisher:
   ros__parameters:

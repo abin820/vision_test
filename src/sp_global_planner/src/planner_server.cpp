@@ -44,6 +44,7 @@ namespace sp_global_planner
     {
         costmap_topic_ = require_param<std::string>(this, "costmap_topic");
         local_costmap_topic_ = require_param<std::string>(this, "local_costmap_topic");
+        esdf_costmap_topic_ = require_param<std::string>(this, "esdf_costmap_topic");
         path_topic_ = require_param<std::string>(this, "path_topic");
 
         plugin_name_ = require_param<std::string>(this, "plugin_name");
@@ -58,6 +59,10 @@ namespace sp_global_planner
         local_map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
             local_costmap_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).reliable().durability_volatile(),
             std::bind(&PlannerServer::onLocalMap, this, std::placeholders::_1));
+
+        esdf_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
+            esdf_costmap_topic_, rclcpp::QoS(rclcpp::KeepLast(1)).reliable().durability_volatile(),
+            std::bind(&PlannerServer::onEsdf, this, std::placeholders::_1));
 
         plan_srv_ = this->create_service<nav_msgs::srv::GetPlan>(
             "make_plan",
@@ -100,6 +105,10 @@ namespace sp_global_planner
                 {
                     planner_->setMap(*map_);
                 }
+                if (esdf_map_)
+                {
+                    planner_->setEsdf(*esdf_map_);
+                }
             }
         }
         catch (const std::exception &e)
@@ -121,6 +130,16 @@ namespace sp_global_planner
         std::lock_guard<std::mutex> lock(map_mutex_);
         local_map_ = *msg;
         updateCombinedMapLocked();
+    }
+
+    void PlannerServer::onEsdf(const nav_msgs::msg::OccupancyGrid::SharedPtr msg)
+    {
+        std::lock_guard<std::mutex> lock(map_mutex_);
+        esdf_map_ = *msg;
+        if (planner_)
+        {
+            planner_->setEsdf(*msg);
+        }
     }
 
     void PlannerServer::onPlanRequest(
