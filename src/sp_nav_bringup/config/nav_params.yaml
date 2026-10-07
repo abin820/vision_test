@@ -10,8 +10,7 @@ planner_server:
     plugin_type: "sp_global_planner/AStarPlanner"
     AStar:
       lethal_cost: 100  #致命代价
-<<<<<<< Updated upstream
-      cost_weight: 3.0 #代价权重
+      cost_weight: 2.0 #代价权重
       # ===== 路径优化（ESDF 梯度下降：拉向走廊中心 + 平滑 + 保持参考路径）=====
       optimize_path: true          # 是否启用路径优化
       opt_alpha: 0.2               # 平滑项权重
@@ -20,9 +19,6 @@ planner_server:
       opt_safe_distance: 0.6       # 安全距离：距墙小于此值时排斥生效 (m)
       opt_min_clearance: 0.3       # 安全约束：优化时点离墙的最小距离 (m)
       opt_iterations: 50           # 迭代次数
-=======
-      cost_weight: 2.0 #代价权重
->>>>>>> Stashed changes
 
 esdf_map_publisher:
   ros__parameters:
