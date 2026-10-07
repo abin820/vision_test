@@ -37,29 +37,11 @@ private:
   nav_msgs::msg::Path global_plan_;
   std::string base_frame_id_;
 
-  // —— 速度环（控制速度大小，反馈 odom 实际速度）——
-  double kp_linear_{1.0};   // 参考速度增益：目标速度 = kp_linear × 剩余距离
-  double kp_v_{0.0};        // 速度环 P（跟踪目标速度）
-  double ki_v_{0.0};        // 速度环 I
-  double kd_v_{0.0};        // 速度环 D
-  double max_linear_velocity_{0.5};
-
-  // —— 方向环（控制运动方向，反馈当前朝向）——
-  double kp_theta_{1.0};    // 方向环 P（1.0 = 纯追踪）
-  double ki_theta_{0.0};    // 方向环 I（建议 0）
-  double kd_theta_{0.0};    // 方向环 D
-
-  // —— 路径跟踪 ——
-  double lookahead_distance_{0.5};
-  double goal_tolerance_{0.15};
-
-  // —— PID 状态（跨调用保存）——
-  double integral_v_{0.0};
-  double prev_error_v_{0.0};
-  double integral_theta_{0.0};
-  double prev_error_theta_{0.0};
-  rclcpp::Time last_time_;
-  bool pid_initialized_{false};
+  // —— 全向底盘位置追踪：速度大小随剩余距离衰减，方向直接指向前瞻点 ——
+  double kp_linear_{1.0};           // 速度增益 v = kp_linear × 剩余距离
+  double max_linear_velocity_{0.5}; // 速度上限 (m/s)
+  double lookahead_distance_{0.5};  // 前瞻距离 (m)
+  double goal_tolerance_{0.15};     // 到达容差 (m)
 };
 
 }

@@ -10,6 +10,7 @@ planner_server:
     plugin_type: "sp_global_planner/AStarPlanner"
     AStar:
       lethal_cost: 100  #致命代价
+<<<<<<< Updated upstream
       cost_weight: 3.0 #代价权重
       # ===== 路径优化（ESDF 梯度下降：拉向走廊中心 + 平滑 + 保持参考路径）=====
       optimize_path: true          # 是否启用路径优化
@@ -19,6 +20,9 @@ planner_server:
       opt_safe_distance: 0.6       # 安全距离：距墙小于此值时排斥生效 (m)
       opt_min_clearance: 0.3       # 安全约束：优化时点离墙的最小距离 (m)
       opt_iterations: 50           # 迭代次数
+=======
+      cost_weight: 2.0 #代价权重
+>>>>>>> Stashed changes
 
 esdf_map_publisher:
   ros__parameters:
@@ -26,10 +30,10 @@ esdf_map_publisher:
     frame_id: "map"
     publish_rate_hz: 1.0                                  #发布频率
     unknown_as_obstacle: false                            #未知区域是否作为障碍物
-    robot_radius: 0.3                                  #机器人半径
-    margin: 0.2                                       #边距
-    d_safe: 0.6                                   #安全距离，当d位于robot_radius+margin和d_safe之间时，会有惩罚机制
-    w: 6.0
+    robot_radius: 0.25                                 #机器人半径
+    margin: 0.05                                       #边距
+    d_safe: 0.70                                   #安全距离，当d位于robot_radius+margin和d_safe之间时，会有惩罚机制
+    w: 12.0
     unknown_cost: 30
     visualize_esdf: true                                  #export GDK_BACKEND=x11，想要显示代价地图需要设置一下变量
 
@@ -48,18 +52,10 @@ controller_server:
 
     PidController:
       base_frame_id: "base_link"
-      # ===== 速度环：目标速度 = kp_linear × 剩余距离，再用 PID 跟踪实际速度 =====
-      kp_linear: 1.2           # 参考速度增益（离终点越远越快）
-      kp_v: 0.0                 # 速度环 P（全向底盘先关，纯前馈最稳）
-      ki_v: 0.0                 # 速度环 I（关：速度反馈有滞后，积分会超调）
-      kd_v: 0.0                 # 速度环 D（关）
-      max_linear_velocity: 0.6  # 速度上限 (m/s)
-      # ===== 方向环：PID 跟踪前瞻点方向 =====
-      kp_theta: 1.0            # 方向环 P（1.0 = 纯追踪，全向底盘最优）
-      ki_theta: 0.0             # 方向环 I（关：会积分振荡/蛇形）
-      kd_theta: 0.0             # 方向环 D（关）
-      # ===== 路径跟踪 =====
-      lookahead_distance: 0.3   # 前瞻距离 (m)
+      # ===== 全向底盘位置追踪：v = kp_linear × 剩余距离，方向直接指向前瞻点 =====
+      kp_linear: 0.2           # 速度增益（离终点越近越慢）
+      max_linear_velocity: 0.8 # 速度上限 (m/s)，过大转弯会切角撞墙
+      lookahead_distance: 0.3   # 前瞻距离 (m)，过长转弯会切角
       goal_tolerance: 0.2       # 到达容差 (m)
 
 sp_decision:

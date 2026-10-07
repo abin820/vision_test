@@ -208,13 +208,13 @@ Visualization Manager:
         Filter size: 10
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /global_costmap  
+        Value: /local_costmap/costmap
       Update Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /esdf_costmap_updates
+        Value: /local_costmap/costmap_updates
       Use Timestamp: false
       Value: true
     - Class: rviz_default_plugins/MarkerArray

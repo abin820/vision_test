@@ -54,7 +54,7 @@ class SimRobot:
         self.target = self.pos.copy()
         self.dragging = False
 
-        self.gimbal_mode: int = 0
+        self.gimbal_mode: int = 2   #不知道为什么自转会影响导航
         self.gimbal_big_yaw_deg: float = 0.0
         self.gimbal_yaw_lower_deg: float = -180.0
         self.gimbal_yaw_upper_deg: float = 180.0

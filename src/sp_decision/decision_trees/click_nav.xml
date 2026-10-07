@@ -15,8 +15,8 @@
                        goal_pose_stamped="{clicked_point}"/>
             <ChassisMode mode="0"
                          is_stop="false"
-                         rotate_velocity="3.0"/>
-            <GimbalControl mode="0"/>
+                         rotate_velocity="0.0"/>
+            <GimbalControl mode="2"/>
           </Sequence>
         </ForceSuccess>
         <SetDouble key="nav_active" value="0.0"/>
